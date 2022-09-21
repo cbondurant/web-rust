@@ -29,36 +29,33 @@ mod tests {
 	#[test]
 	fn header_parsing() {
 		assert_eq!(
-			Token::Heading(1, "Test".to_string()),
-			MDParser::parse("# Test").into_iter().next().unwrap()
-		);
-		assert_eq!(
-			Token::Heading(2, "Test".to_string()),
-			MDParser::parse("## Test").into_iter().next().unwrap()
-		);
-		assert_eq!(
-			Token::Heading(3, "Test".to_string()),
-			MDParser::parse("### Test").into_iter().next().unwrap()
-		);
-		assert_eq!(
-			Token::Heading(4, "Test".to_string()),
-			MDParser::parse("#### Test").into_iter().next().unwrap()
-		);
-		assert_eq!(
-			Token::Heading(5, "Test".to_string()),
-			MDParser::parse("##### Test").into_iter().next().unwrap()
-		);
-		assert_eq!(
-			Token::Heading(6, "Test".to_string()),
-			MDParser::parse("###### Test").into_iter().next().unwrap()
+			vec![
+				Token::Heading(1, "Test".to_string()),
+				Token::Heading(2, "Test".to_string()),
+				Token::Heading(3, "Test".to_string()),
+				Token::Heading(4, "Test".to_string()),
+				Token::Heading(5, "Test".to_string()),
+				Token::Heading(6, "Test".to_string()),
+			],
+			MDParser::parse(
+				"# Test
+				## Test
+				### Test
+				#### Test
+				##### Test
+				###### Test
+				"
+			)
+			.into_iter()
+			.collect::<Vec<Token>>()
 		);
 	}
 
 	#[test]
 	fn paragraph_parsing() {
 		assert_eq!(
-			Token::Paragraph(vec![Token::Text("Hi".to_string())]),
-			MDParser::parse("Hi").into_iter().next().unwrap()
+			vec![Token::Paragraph(vec![Token::Text("Hi".to_string())])],
+			MDParser::parse("Hi").into_iter().collect::<Vec<Token>>()
 		);
 	}
 }
