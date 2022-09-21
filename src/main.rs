@@ -6,8 +6,17 @@ mod mdparser;
 
 fn main() {
 
-	let mut parser = mdparser::MDParser::parse("This is a test paragraph!\n *and* a continuation\n\nSecond Paragraph\n");
+	let parser = mdparser::MDParser::parse(
+"# This is my level 1 header
+## This is my level 2 header
 
-	println!("{:?}", parser.next());
-	println!("{:?}", parser.next());
+Wow!!!
+This is a test paragraph!
+*and* a continuation
+
+Second Paragraph");
+
+	for token in parser{
+		println!("{:?}", token);
+	}
 }
