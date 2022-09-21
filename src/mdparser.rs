@@ -1,3 +1,5 @@
+use std::ops::Add;
+
 #[derive(Debug)]
 pub enum Token<'a> {
 	Heading(i8, &'a str), // Heading size, then the text.
@@ -33,7 +35,7 @@ impl MDParser<'_> {
 
 	pub fn next(&mut self) -> Token {
 		if let Some(index) = self.markdown[self.index..].find(|c: char| !c.is_whitespace()){
-			self.index = index;
+			self.index += index; // Index is relative now
 		}else{
 			return Token::Done;
 		}
@@ -58,17 +60,16 @@ impl MDParser<'_> {
 	}
 
 	fn parse_paragraph_internals(text: &str)-> Token {
-		let contents: Vec<Token> = Vec::new();
-		while text.len() > 0 { // We will slowly consume our reference
-			if let Some(token_index) = text.find(['*','\\','[','_']){
-				match text[token_index] {
-					'*' => (),
-					'\\' => (),
-					'[' => (),
-					'_' => (),
-				}
-			}
+		let mut contents = Vec::new();
+
+		let mut new_text = String::new();
+
+		for line in text.split("\n"){
+			new_text.push_str(" ");
+			new_text.push_str(line.trim());
 		}
+		let body = Token::Text(new_text);
+		contents.push(body);
 		Token::Paragraph(contents)
 	}
 

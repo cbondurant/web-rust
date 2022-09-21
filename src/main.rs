@@ -6,7 +6,8 @@ mod mdparser;
 
 fn main() {
 
-	let mut parser = mdparser::MDParser::parse("This is a test paragraph!\n and a continuation");
+	let mut parser = mdparser::MDParser::parse("This is a test paragraph!\n *and* a continuation\n\nSecond Paragraph\n");
 
+	println!("{:?}", parser.next());
 	println!("{:?}", parser.next());
 }
