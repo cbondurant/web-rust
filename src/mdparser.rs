@@ -1,5 +1,3 @@
-use std::ops::Add;
-
 #[derive(Debug)]
 pub enum Token<'a> {
 	Heading(i8, &'a str), // Heading size, then the text.
