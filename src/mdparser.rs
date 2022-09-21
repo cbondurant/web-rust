@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Token {
 	Heading(i8, String), // Heading size, then the text.
 	Paragraph(Vec<Token>),
@@ -58,7 +58,6 @@ impl<'a> MDParser<'a> {
 		}
 	}
 
-
 	fn consume_header(&mut self) -> Token {
 		let mut header_level = 0;
 		while Some("#") == self.markdown[self.index..].get(..1){
@@ -91,11 +90,16 @@ impl<'a> MDParser<'a> {
 	fn parse_paragraph_internals(text: &str)-> Token {
 		let mut contents = Vec::new();
 
-		let mut new_text = String::new();
+		let mut text_split = text.split('\n');
 
-		for line in text.split('\n'){
-			new_text.push(' ');
-			new_text.push_str(line.trim());
+		let mut new_text = String::new();
+		if let Some(start) = text_split.next(){
+			new_text.push_str(start);
+
+			for line in text_split{
+				new_text.push(' ');
+				new_text.push_str(line.trim());
+			}
 		}
 		let body = Token::Text(new_text);
 		contents.push(body);
