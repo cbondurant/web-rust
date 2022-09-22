@@ -29,33 +29,38 @@ mod tests {
 	#[test]
 	fn header_parsing() {
 		assert_eq!(
-			vec![
-				Token::Heading(1, "Test".to_string()),
-				Token::Heading(2, "Test".to_string()),
-				Token::Heading(3, "Test".to_string()),
-				Token::Heading(4, "Test".to_string()),
-				Token::Heading(5, "Test".to_string()),
-				Token::Heading(6, "Test".to_string()),
-			],
-			MDParser::parse(
-				"# Test
-				## Test
-				### Test
-				#### Test
-				##### Test
-				###### Test
-				"
-			)
-			.into_iter()
-			.collect::<Vec<Token>>()
+			vec![Token::Heading(1, "Test".to_string())],
+			MDParser::parse("# Test")
+				.into_iter()
+				.collect::<Vec<Token>>()
 		);
 	}
+
+	// TODO: test for multiple headers directly next to each other.
+	// The behavior I want is significantly harder to code than the other natural option.
 
 	#[test]
 	fn paragraph_parsing() {
 		assert_eq!(
 			vec![Token::Paragraph(vec![Token::Text("Hi".to_string())])],
 			MDParser::parse("Hi").into_iter().collect::<Vec<Token>>()
+		);
+	}
+
+	#[test]
+	fn multiple_paragraphs() {
+		assert_eq!(
+			vec![
+				Token::Paragraph(vec![Token::Text("Paragraph 1".to_string())]),
+				Token::Paragraph(vec![Token::Text("Paragraph 2".to_string())])
+			],
+			MDParser::parse(
+				"Paragraph 1
+
+Paragraph 2"
+			)
+			.into_iter()
+			.collect::<Vec<Token>>()
 		);
 	}
 }

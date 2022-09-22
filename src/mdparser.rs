@@ -11,31 +11,30 @@ pub enum Token {
 
 pub struct MDParser<'a> {
 	markdown: &'a str,
-	index: usize,
+	// TODO: what is the + 'a syntax on display here?
+	// It was important to this block working but I don't understand it yet.
+	blocks: Box<dyn Iterator<Item = &'a str> + 'a>,
 }
 
 impl<'a> Iterator for MDParser<'a> {
 	type Item = Token;
 
 	fn next(&mut self) -> Option<Token> {
-		if let Some(index) = self.markdown[self.index..].find(|c: char| !c.is_whitespace()) {
-			self.index += index; // Index is relative now
+		if let Some(body) = self.blocks.next() {
+			let leading_grapheme = MDParser::get_leading_grapheme(body);
+
+			match leading_grapheme {
+				// Theres gotta be a better way here but hell if I know what it is.
+				"#" => Some(Self::consume_header(body)),
+				"##" => Some(Self::consume_header(body)),
+				"###" => Some(Self::consume_header(body)),
+				"####" => Some(Self::consume_header(body)),
+				"#####" => Some(Self::consume_header(body)),
+				"######" => Some(Self::consume_header(body)),
+				_ => Some(Self::consume_paragraph(body)),
+			}
 		} else {
 			return None;
-		}
-		let leading_grapheme = MDParser::get_leading_grapheme(&self.markdown[self.index..]);
-
-		// Mutate the index internally here, instead of having to manage passing it in and out of the
-		// function call
-		match leading_grapheme {
-			// Theres gotta be a better way here but hell if I know what it is.
-			"#" => Some(self.consume_header()),
-			"##" => Some(self.consume_header()),
-			"###" => Some(self.consume_header()),
-			"####" => Some(self.consume_header()),
-			"#####" => Some(self.consume_header()),
-			"######" => Some(self.consume_header()),
-			_ => Some(self.consume_paragraph()),
 		}
 	}
 }
@@ -44,7 +43,7 @@ impl<'a> MDParser<'a> {
 	pub fn parse(text: &str) -> MDParser {
 		MDParser {
 			markdown: text,
-			index: 0,
+			blocks: Box::new(text.split("\n\n")),
 		}
 	}
 
@@ -56,40 +55,19 @@ impl<'a> MDParser<'a> {
 		}
 	}
 
-	fn consume_header(&mut self) -> Token {
+	fn consume_header(mut text: &str) -> Token {
 		let mut header_level = 0;
-		while Some("#") == self.markdown[self.index..].get(..1) {
+		while Some("#") == text.get(..1) {
 			header_level += 1;
-			self.index += 1;
+			text = &text[1..];
 		}
 
-		self.index += self.markdown[self.index..]
-			.find(|c: char| !c.is_whitespace())
-			.unwrap_or(0);
+		text = &text[text.find(|c: char| !c.is_whitespace()).unwrap_or(0)..];
 
-		let start = self.index;
-		// I think headers should only be one line.
-		let end = self.markdown[self.index..]
-			.find('\n')
-			.unwrap_or_else(|| self.markdown[self.index..].len());
-		self.index += end;
-		Token::Heading(header_level, self.markdown[start..start + end].to_string())
+		Token::Heading(header_level, text.trim().to_string())
 	}
 
-	fn consume_paragraph(&mut self) -> Token {
-		let start = self.index;
-		// TODO: remove the need to both iterate for find and then iterate in the replace.
-
-		if let Some(end) = self.markdown[self.index..].find("\n\n") {
-			self.index += end;
-			MDParser::parse_paragraph_internals(&self.markdown[start..start + end])
-		} else {
-			self.index = self.markdown.len(); // This paragraph is the final bit of text, reached end of text.
-			MDParser::parse_paragraph_internals(&self.markdown[start..])
-		}
-	}
-
-	fn parse_paragraph_internals(text: &str) -> Token {
+	fn consume_paragraph(text: &str) -> Token {
 		let mut contents = Vec::new();
 
 		let mut text_split = text.split('\n');
@@ -107,4 +85,5 @@ impl<'a> MDParser<'a> {
 		contents.push(body);
 		Token::Paragraph(contents)
 	}
+
 }
