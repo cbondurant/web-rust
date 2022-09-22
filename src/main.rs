@@ -55,7 +55,22 @@ mod tests {
 				Token::Paragraph(vec![Token::Text("Paragraph 2".to_string())])
 			],
 			MDParser::parse(
-				"Paragraph 1
+"Paragraph 1
+
+Paragraph 2"
+			)
+			.into_iter()
+			.collect::<Vec<Token>>()
+		);
+
+		assert_eq!(
+			vec![
+				Token::Paragraph(vec![Token::Text("Paragraph 1".to_string())]),
+				Token::Paragraph(vec![Token::Text("Paragraph 2".to_string())])
+			],
+			MDParser::parse(
+"Paragraph 1
+
 
 Paragraph 2"
 			)

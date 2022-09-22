@@ -21,16 +21,12 @@ impl<'a> Iterator for MDParser<'a> {
 
 	fn next(&mut self) -> Option<Token> {
 		if let Some(body) = self.blocks.next() {
-			let leading_grapheme = MDParser::get_leading_grapheme(body);
+			if body == "" { return None }
+			let leading_char = &body[..1];
 
-			match leading_grapheme {
+			match leading_char {
 				// Theres gotta be a better way here but hell if I know what it is.
 				"#" => Some(Self::consume_header(body)),
-				"##" => Some(Self::consume_header(body)),
-				"###" => Some(Self::consume_header(body)),
-				"####" => Some(Self::consume_header(body)),
-				"#####" => Some(Self::consume_header(body)),
-				"######" => Some(Self::consume_header(body)),
 				_ => Some(Self::consume_paragraph(body)),
 			}
 		} else {
@@ -44,14 +40,6 @@ impl<'a> MDParser<'a> {
 		MDParser {
 			markdown: text,
 			blocks: Box::new(text.split("\n\n")),
-		}
-	}
-
-	fn get_leading_grapheme(text: &str) -> &str {
-		if let Some(back_index) = text.find(char::is_whitespace) {
-			&text[..back_index]
-		} else {
-			""
 		}
 	}
 
@@ -70,7 +58,7 @@ impl<'a> MDParser<'a> {
 	fn consume_paragraph(text: &str) -> Token {
 		let mut contents = Vec::new();
 
-		let mut text_split = text.split('\n');
+		let mut text_split = text.trim().split('\n');
 
 		let mut new_text = String::new();
 		if let Some(start) = text_split.next() {
