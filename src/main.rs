@@ -25,7 +25,7 @@ Second Paragraph",
 mod tests {
 	use std::vec;
 
-use crate::mdparser::{MDParser, Token};
+	use crate::mdparser::{MDParser, Token};
 
 	// It is my belief that tests have no need to be pretty, they are far too functional for that.
 	#[test]
@@ -80,14 +80,18 @@ Paragraph 2"
 	}
 
 	#[test]
-	fn paragraph_continuation(){
+	fn paragraph_continuation() {
 		assert_eq!(
-		vec![
-			Token::Paragraph(vec![Token::Text("Paragraph"),
-			Token::Text("Continuation")])
-		],
-		MDParser::parse("Paragraph
-		Continuation").iter().collect::<Vec<Token>>()
-	)
+			vec![Token::Paragraph(vec![
+				Token::Text("Paragraph"),
+				Token::Text("Continuation")
+			])],
+			MDParser::parse(
+				"Paragraph
+		Continuation"
+			)
+			.iter()
+			.collect::<Vec<Token>>()
+		)
 	}
 }
