@@ -16,7 +16,7 @@ This is a test paragraph!
 Second Paragraph",
 	);
 
-	for token in parser {
+	for token in parser.iter() {
 		println!("{:?}", token);
 	}
 }
@@ -29,10 +29,8 @@ mod tests {
 	#[test]
 	fn header_parsing() {
 		assert_eq!(
-			vec![Token::Heading(1, "Test".to_string())],
-			MDParser::parse("# Test")
-				.into_iter()
-				.collect::<Vec<Token>>()
+			vec![Token::Heading(1, "Test")],
+			MDParser::parse("# Test").iter().collect::<Vec<Token>>()
 		);
 	}
 
@@ -43,7 +41,7 @@ mod tests {
 	fn paragraph_parsing() {
 		assert_eq!(
 			vec![Token::Paragraph(vec![Token::Text("Hi".to_string())])],
-			MDParser::parse("Hi").into_iter().collect::<Vec<Token>>()
+			MDParser::parse("Hi").iter().collect::<Vec<Token>>()
 		);
 	}
 
@@ -55,11 +53,11 @@ mod tests {
 				Token::Paragraph(vec![Token::Text("Paragraph 2".to_string())])
 			],
 			MDParser::parse(
-"Paragraph 1
+				"Paragraph 1
 
 Paragraph 2"
 			)
-			.into_iter()
+			.iter()
 			.collect::<Vec<Token>>()
 		);
 
@@ -69,12 +67,12 @@ Paragraph 2"
 				Token::Paragraph(vec![Token::Text("Paragraph 2".to_string())])
 			],
 			MDParser::parse(
-"Paragraph 1
+				"Paragraph 1
 
 
 Paragraph 2"
 			)
-			.into_iter()
+			.iter()
 			.collect::<Vec<Token>>()
 		);
 	}

@@ -1,45 +1,28 @@
 #[derive(Debug, PartialEq)]
-pub enum Token {
-	Heading(i8, String), // Heading size, then the text.
-	Paragraph(Vec<Token>),
-	Blockquote(String),
-	Link { href: String, text: String },
-	Codeblock { lang: String, text: String },
+pub enum Token<'a> {
+	Heading(i8, &'a str), // Heading size, then the text.
+	Paragraph(Vec<Token<'a>>),
+	Blockquote(&'a str),
+	Link { href: &'a str, text: &'a str },
+	// Codeblock { lang: &'a str, text: &'a str },
 	Text(String),
 	Done,
 }
 
 pub struct MDParser<'a> {
 	markdown: &'a str,
-	// TODO: what is the + 'a syntax on display here?
-	// It was important to this block working but I don't understand it yet.
-	blocks: Box<dyn Iterator<Item = &'a str> + 'a>,
 }
 
-impl<'a> Iterator for MDParser<'a> {
-	type Item = Token;
-
-	fn next(&mut self) -> Option<Token> {
-		if let Some(body) = self.blocks.next() {
-			if body == "" { return None }
-			let leading_char = &body[..1];
-
-			match leading_char {
-				// Theres gotta be a better way here but hell if I know what it is.
-				"#" => Some(Self::consume_header(body)),
-				_ => Some(Self::consume_paragraph(body)),
-			}
-		} else {
-			return None;
-		}
-	}
+pub struct MDParserIter<'parser, 'text> {
+	parser: &'parser MDParser<'text>,
+	blocks: Box<dyn Iterator<Item = &'text str> + 'text>,
 }
 
-impl<'a> MDParser<'a> {
-	pub fn parse(text: &str) -> MDParser {
-		MDParser {
-			markdown: text,
-			blocks: Box::new(text.split("\n\n")),
+impl<'parser, 'text> MDParserIter<'parser, 'text> {
+	fn new(parser: &'parser MDParser<'text>) -> Self {
+		MDParserIter {
+			parser: parser,
+			blocks: Box::new(parser.markdown.split("\n\n")),
 		}
 	}
 
@@ -52,7 +35,7 @@ impl<'a> MDParser<'a> {
 
 		text = &text[text.find(|c: char| !c.is_whitespace()).unwrap_or(0)..];
 
-		Token::Heading(header_level, text.trim().to_string())
+		Token::Heading(header_level, text.trim())
 	}
 
 	fn consume_paragraph(text: &str) -> Token {
@@ -73,5 +56,35 @@ impl<'a> MDParser<'a> {
 		contents.push(body);
 		Token::Paragraph(contents)
 	}
+}
 
+impl<'parser, 'text> Iterator for MDParserIter<'parser, 'text> {
+	type Item = Token<'text>;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		if let Some(body) = self.blocks.next() {
+			if body == "" {
+				return None;
+			}
+			let leading_char = &body[..1];
+
+			match leading_char {
+				// Theres gotta be a better way here but hell if I know what it is.
+				"#" => Some(Self::consume_header(body)),
+				_ => Some(Self::consume_paragraph(body)),
+			}
+		} else {
+			return None;
+		}
+	}
+}
+
+impl<'parser, 'text> MDParser<'text> {
+	pub fn parse(text: &str) -> MDParser {
+		MDParser { markdown: text }
+	}
+
+	pub fn iter(&'parser self) -> MDParserIter<'parser, 'text> {
+		MDParserIter::new(self)
+	}
 }
