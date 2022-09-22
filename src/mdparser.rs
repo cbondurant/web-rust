@@ -5,7 +5,7 @@ pub enum Token<'a> {
 	Blockquote(&'a str),
 	Link { href: &'a str, text: &'a str },
 	// Codeblock { lang: &'a str, text: &'a str },
-	Text(String),
+	Text(&'a str),
 	Done,
 }
 
@@ -39,22 +39,10 @@ impl<'parser, 'text> MDParserIter<'parser, 'text> {
 	}
 
 	fn consume_paragraph(text: &str) -> Token {
-		let mut contents = Vec::new();
 
-		let mut text_split = text.trim().split('\n');
+		let text_split = text.trim().split('\n').map(str::trim).map(Token::Text);
 
-		let mut new_text = String::new();
-		if let Some(start) = text_split.next() {
-			new_text.push_str(start);
-
-			for line in text_split {
-				new_text.push(' ');
-				new_text.push_str(line.trim());
-			}
-		}
-		let body = Token::Text(new_text);
-		contents.push(body);
-		Token::Paragraph(contents)
+		Token::Paragraph(text_split.collect())
 	}
 }
 
