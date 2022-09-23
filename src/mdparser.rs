@@ -13,67 +13,63 @@ pub struct MDParser<'a> {
 	markdown: &'a str,
 }
 
-pub struct MDParserIter<'parser, 'text> {
-	parser: &'parser MDParser<'text>,
-	blocks: Box<dyn Iterator<Item = &'text str> + 'text>,
-}
-
-impl<'parser, 'text> MDParserIter<'parser, 'text> {
-	fn new(parser: &'parser MDParser<'text>) -> Self {
-		MDParserIter {
-			parser: parser,
-			blocks: Box::new(parser.markdown.split("\n\n")),
-		}
-	}
-
-	fn consume_header(mut text: &str) -> Token {
-		// TODO: Split Header case?
-		let mut header_level = 0;
-		while Some("#") == text.get(..1) {
-			header_level += 1;
-			text = &text[1..];
-		}
-
-		text = &text[text.find(|c: char| !c.is_whitespace()).unwrap_or(0)..];
-
-		Token::Heading(header_level, text.trim())
-	}
-
-	fn consume_paragraph(text: &str) -> Token {
-
-		let text_split = text.trim().split('\n').map(str::trim).map(Token::Text);
-
-		Token::Paragraph(text_split.collect())
+impl<'text> MDParser<'text> {
+	pub fn new(text: &'text str) -> Self {
+		MDParser { markdown: text }
 	}
 }
 
-impl<'text> Iterator for MDParserIter<'_, 'text> {
+impl<'text> Iterator for MDParser<'text> {
 	type Item = Token<'text>;
 
-	fn next(&mut self) -> Option<Self::Item> {
-		if let Some(body) = self.blocks.next() {
-			if body == "" {
-				return None; // TODO: This breaks it weird.
-			}
-			let leading_char = &body.trim()[..1];
-
-			match leading_char {
+	fn next(&mut self) -> Option<Token<'text>> {
+		self.markdown = self.markdown.trim_start();
+		if let Some(leading_char) = self.markdown.chars().next() {
+			let (token, lookahead) = match leading_char {
 				// Theres gotta be a better way here but hell if I know what it is.
-				"#" => Some(Self::consume_header(body)),
-				_ => Some(Self::consume_paragraph(body)),
-			}
+				'#' => Self::consume_header(self.markdown),
+				_ => Self::consume_paragraph(self.markdown),
+			};
+			self.markdown = &self.markdown[lookahead..];
+			Some(token)
 		} else {
 			return None;
 		}
 	}
 }
 
-impl<'parser, 'text> MDParser<'text> {
-	pub fn parse(text: &str) -> MDParser {
-		MDParser { markdown: text }
+impl<'text> MDParser<'text> {
+
+	fn consume_header(markdown: &'text str) -> (Token<'text>, usize) {
+		// TODO: Split Header case?
+		let mut header_level = 0;
+		while markdown[header_level..].starts_with('#') {
+			header_level += 1;
+		}
+
+		let eol = markdown.find('\n').unwrap_or(markdown.len());
+		let head = &markdown[header_level..eol];
+
+
+		(Token::Heading(header_level as i8, head.trim()), eol)
 	}
 
-	pub fn iter(&'parser self) -> MDParserIter<'parser, 'text> {
-		MDParserIter::new(self)
+	fn consume_paragraph(markdown: &'text str) -> (Token, usize) {
+
+		let mut lookahead = markdown.len();
+
+		let mut peek_iter = markdown.char_indices().peekable();
+		while let Some((index, c)) = peek_iter.next(){
+			if c == '\n' {
+				if let Some((_,'\n')) = peek_iter.peek() {
+					lookahead = index;
+					break;
+				}
+			}
+		}
+
+		let text_split = markdown[..lookahead].trim().split('\n').map(str::trim).map(Token::Text);
+
+		(Token::Paragraph(text_split.collect()), lookahead)
 	}
 }

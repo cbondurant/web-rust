@@ -5,7 +5,7 @@ mod mdparser;
 use mdparser::MDParser;
 
 fn main() {
-	let parser = MDParser::parse(
+	let parser = MDParser::new(
 		"# This is my level 1 header
 ## This is my level 2 header
 
@@ -18,7 +18,8 @@ This is a test paragraph!
 Second Paragraph",
 	);
 
-	for token in parser.iter() {
+	// Take for testing in case i accidentally make infinite tags...
+	for token in parser.take(5) {
 		println!("{:?}", token);
 	}
 }
@@ -29,71 +30,75 @@ mod tests {
 
 	use crate::mdparser::{MDParser, Token};
 
+	fn assert_parse(parse: Vec<Token>, md: &str){
+
+		assert_eq!(parse,
+			MDParser::new(md).collect::<Vec<Token>>()
+		);
+	}
+
 	// It is my belief that tests have no need to be pretty, they are far too functional for that.
 	#[test]
-	fn header_parsing() {
-		assert_eq!(
+	fn all_header_sizes_should_be_valid() {
+		assert_parse(
 			vec![Token::Heading(1, "Test")],
-			MDParser::parse("# Test").iter().collect::<Vec<Token>>()
+			"# Test"
 		);
+	}
+
+	#[test]
+	fn adjacent_paragraphs_should_parse_seperately(){
+		assert_parse(
+			vec![Token::Heading(1, "test"),
+						Token::Heading(2, "test2")],
+						"# test\n## test2"
+		)
 	}
 
 	// TODO: test for multiple headers directly next to each other.
 	// The behavior I want is significantly harder to code than the other natural option.
 
 	#[test]
-	fn paragraph_parsing() {
-		assert_eq!(
+	fn unmarked_lines_are_paragraphs() {
+		assert_parse(
 			vec![Token::Paragraph(vec![Token::Text("Hi")])],
-			MDParser::parse("Hi").iter().collect::<Vec<Token>>()
+			"Hi"
 		);
 	}
 
 	#[test]
-	fn multiple_paragraphs() {
-		assert_eq!(
+	fn paragraphs_with_blank_line_between_parse_seperately() {
+		assert_parse(
 			vec![
 				Token::Paragraph(vec![Token::Text("Paragraph 1")]),
 				Token::Paragraph(vec![Token::Text("Paragraph 2")])
 			],
-			MDParser::parse(
 				"Paragraph 1
 
 Paragraph 2"
-			)
-			.iter()
-			.collect::<Vec<Token>>()
 		);
 
-		assert_eq!(
+		assert_parse(
 			vec![
 				Token::Paragraph(vec![Token::Text("Paragraph 1")]),
 				Token::Paragraph(vec![Token::Text("Paragraph 2")])
 			],
-			MDParser::parse(
 				"Paragraph 1
 
 
 Paragraph 2"
-			)
-			.iter()
-			.collect::<Vec<Token>>()
 		);
 	}
 
 	#[test]
 	fn paragraph_continuation() {
-		assert_eq!(
+		assert_parse(
 			vec![Token::Paragraph(vec![
 				Token::Text("Paragraph"),
 				Token::Text("Continuation")
 			])],
-			MDParser::parse(
 				"Paragraph
 		Continuation"
-			)
-			.iter()
-			.collect::<Vec<Token>>()
 		)
 	}
 }
