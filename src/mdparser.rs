@@ -27,12 +27,11 @@ impl<'text> Iterator for MDParser<'text> {
 	fn next(&mut self) -> Option<Token<'text>> {
 		self.markdown = self.markdown.trim_start();
 		if let Some(leading_char) = self.markdown.chars().next() {
-			let (token, lookahead) = match leading_char {
-				'>' => Self::consume_blockquote(self.markdown),
-				'#' => Self::consume_header(self.markdown),
-				_ => Self::consume_paragraph(self.markdown),
+			let token = match leading_char {
+				'>' => self.consume_blockquote(),
+				'#' => self.consume_header(),
+				_ => self.consume_paragraph(),
 			};
-			self.markdown = &self.markdown[lookahead..];
 			Some(token)
 		} else {
 			None
@@ -41,10 +40,14 @@ impl<'text> Iterator for MDParser<'text> {
 }
 
 impl<'text> MDParser<'text> {
-	fn consume_blockquote(markdown: &'text str) -> (Token<'text>, usize) {
-		let mut lookahead = markdown.len();
+	fn advance_markdown(&mut self, lookahead: usize) {
+		self.markdown = &self.markdown[lookahead..];
+	}
 
-		let mut peek_iter = markdown.char_indices().peekable();
+	fn consume_blockquote(&mut self) -> Token<'text> {
+		let mut lookahead = self.markdown.len();
+
+		let mut peek_iter = self.markdown.char_indices().peekable();
 		while let Some((index, c)) = peek_iter.next() {
 			if c == '\n' {
 				if let Some((_, '\n')) = peek_iter.peek() {
@@ -54,31 +57,36 @@ impl<'text> MDParser<'text> {
 			}
 		}
 
-		let text_split = markdown[..lookahead]
+		let text_split = self.markdown[..lookahead]
 			.trim()
 			.split('\n')
 			.map(str::trim)
 			.map(Token::Text);
-		(Token::Blockquote(text_split.collect()), lookahead)
+
+		self.advance_markdown(lookahead);
+
+		Token::Blockquote(text_split.collect())
 	}
 
-	fn consume_header(markdown: &'text str) -> (Token<'text>, usize) {
+	fn consume_header(&mut self) -> Token<'text> {
 		// TODO: Split Header case?
 		let mut header_level = 0;
-		while markdown[header_level..].starts_with('#') {
+		while self.markdown[header_level..].starts_with('#') {
 			header_level += 1;
 		}
 
-		let eol = markdown.find('\n').unwrap_or(markdown.len());
-		let head = &markdown[header_level..eol];
+		let lookahead = self.markdown.find('\n').unwrap_or(self.markdown.len());
+		let head = &self.markdown[header_level..lookahead];
 
-		(Token::Heading(header_level as i8, head.trim()), eol)
+		self.advance_markdown(lookahead);
+
+		Token::Heading(header_level as i8, head.trim())
 	}
 
-	fn consume_paragraph(markdown: &'text str) -> (Token, usize) {
-		let mut lookahead = markdown.len();
+	fn consume_paragraph(&mut self) -> Token<'text> {
+		let mut lookahead = self.markdown.len();
 
-		let mut peek_iter = markdown.char_indices().peekable();
+		let mut peek_iter = self.markdown.char_indices().peekable();
 		while let Some((index, c)) = peek_iter.next() {
 			if c == '\n' {
 				if let Some((_, '\n')) = peek_iter.peek() {
@@ -88,12 +96,14 @@ impl<'text> MDParser<'text> {
 			}
 		}
 
-		let text_split = markdown[..lookahead]
+		let text_split = self.markdown[..lookahead]
 			.trim()
 			.split('\n')
 			.map(str::trim)
 			.map(Token::Text);
 
-		(Token::Paragraph(text_split.collect()), lookahead)
+		self.advance_markdown(lookahead);
+
+		Token::Paragraph(text_split.collect())
 	}
 }
