@@ -9,7 +9,10 @@ fn main() {
 		"# This is my level 1 header
 ## This is my level 2 header
 
+> Blockquote
+> Blockquote pt.ii
 
+> Second Blockquote
 
 Wow!!!
 This is a test paragraph!
@@ -19,7 +22,7 @@ Second Paragraph",
 	);
 
 	// Take for testing in case i accidentally make infinite tags...
-	for token in parser.take(5) {
+	for token in parser.take(10) {
 		println!("{:?}", token);
 	}
 }
@@ -30,28 +33,21 @@ mod tests {
 
 	use crate::mdparser::{MDParser, Token};
 
-	fn assert_parse(parse: Vec<Token>, md: &str){
-
-		assert_eq!(parse,
-			MDParser::new(md).collect::<Vec<Token>>()
-		);
+	fn assert_parse(parse: Vec<Token>, md: &str) {
+		assert_eq!(parse, MDParser::new(md).collect::<Vec<Token>>());
 	}
 
 	// It is my belief that tests have no need to be pretty, they are far too functional for that.
 	#[test]
 	fn all_header_sizes_should_be_valid() {
-		assert_parse(
-			vec![Token::Heading(1, "Test")],
-			"# Test"
-		);
+		assert_parse(vec![Token::Heading(1, "Test")], "# Test");
 	}
 
 	#[test]
-	fn adjacent_paragraphs_should_parse_seperately(){
+	fn adjacent_paragraphs_should_parse_seperately() {
 		assert_parse(
-			vec![Token::Heading(1, "test"),
-						Token::Heading(2, "test2")],
-						"# test\n## test2"
+			vec![Token::Heading(1, "test"), Token::Heading(2, "test2")],
+			"# test\n## test2",
 		)
 	}
 
@@ -60,10 +56,7 @@ mod tests {
 
 	#[test]
 	fn unmarked_lines_are_paragraphs() {
-		assert_parse(
-			vec![Token::Paragraph(vec![Token::Text("Hi")])],
-			"Hi"
-		);
+		assert_parse(vec![Token::Paragraph(vec![Token::Text("Hi")])], "Hi");
 	}
 
 	#[test]
@@ -71,22 +64,22 @@ mod tests {
 		assert_parse(
 			vec![
 				Token::Paragraph(vec![Token::Text("Paragraph 1")]),
-				Token::Paragraph(vec![Token::Text("Paragraph 2")])
+				Token::Paragraph(vec![Token::Text("Paragraph 2")]),
 			],
-				"Paragraph 1
+			"Paragraph 1
 
-Paragraph 2"
+Paragraph 2",
 		);
 
 		assert_parse(
 			vec![
 				Token::Paragraph(vec![Token::Text("Paragraph 1")]),
-				Token::Paragraph(vec![Token::Text("Paragraph 2")])
+				Token::Paragraph(vec![Token::Text("Paragraph 2")]),
 			],
-				"Paragraph 1
+			"Paragraph 1
 
 
-Paragraph 2"
+Paragraph 2",
 		);
 	}
 
@@ -95,10 +88,10 @@ Paragraph 2"
 		assert_parse(
 			vec![Token::Paragraph(vec![
 				Token::Text("Paragraph"),
-				Token::Text("Continuation")
+				Token::Text("Continuation"),
 			])],
-				"Paragraph
-		Continuation"
+			"Paragraph
+		Continuation",
 		)
 	}
 }

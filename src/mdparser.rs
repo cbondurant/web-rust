@@ -2,9 +2,11 @@
 pub enum Token<'a> {
 	Heading(i8, &'a str), // Heading size, then the text.
 	Paragraph(Vec<Token<'a>>),
-	Blockquote(&'a str),
+	Blockquote(Vec<Token<'a>>),
 	Link { href: &'a str, text: &'a str },
-	// Codeblock { lang: &'a str, text: &'a str },
+	Image { src: &'a str },
+	InlineCode(&'a str),
+	Codeblock { lang: &'a str, text: &'a str },
 	Text(&'a str),
 	Done,
 }
@@ -26,19 +28,39 @@ impl<'text> Iterator for MDParser<'text> {
 		self.markdown = self.markdown.trim_start();
 		if let Some(leading_char) = self.markdown.chars().next() {
 			let (token, lookahead) = match leading_char {
-				// Theres gotta be a better way here but hell if I know what it is.
+				'>' => Self::consume_blockquote(self.markdown),
 				'#' => Self::consume_header(self.markdown),
 				_ => Self::consume_paragraph(self.markdown),
 			};
 			self.markdown = &self.markdown[lookahead..];
 			Some(token)
 		} else {
-			return None;
+			None
 		}
 	}
 }
 
 impl<'text> MDParser<'text> {
+	fn consume_blockquote(markdown: &'text str) -> (Token<'text>, usize) {
+		let mut lookahead = markdown.len();
+
+		let mut peek_iter = markdown.char_indices().peekable();
+		while let Some((index, c)) = peek_iter.next() {
+			if c == '\n' {
+				if let Some((_, '\n')) = peek_iter.peek() {
+					lookahead = index;
+					break;
+				}
+			}
+		}
+
+		let text_split = markdown[..lookahead]
+			.trim()
+			.split('\n')
+			.map(str::trim)
+			.map(Token::Text);
+		(Token::Blockquote(text_split.collect()), lookahead)
+	}
 
 	fn consume_header(markdown: &'text str) -> (Token<'text>, usize) {
 		// TODO: Split Header case?
@@ -50,25 +72,27 @@ impl<'text> MDParser<'text> {
 		let eol = markdown.find('\n').unwrap_or(markdown.len());
 		let head = &markdown[header_level..eol];
 
-
 		(Token::Heading(header_level as i8, head.trim()), eol)
 	}
 
 	fn consume_paragraph(markdown: &'text str) -> (Token, usize) {
-
 		let mut lookahead = markdown.len();
 
 		let mut peek_iter = markdown.char_indices().peekable();
-		while let Some((index, c)) = peek_iter.next(){
+		while let Some((index, c)) = peek_iter.next() {
 			if c == '\n' {
-				if let Some((_,'\n')) = peek_iter.peek() {
+				if let Some((_, '\n')) = peek_iter.peek() {
 					lookahead = index;
 					break;
 				}
 			}
 		}
 
-		let text_split = markdown[..lookahead].trim().split('\n').map(str::trim).map(Token::Text);
+		let text_split = markdown[..lookahead]
+			.trim()
+			.split('\n')
+			.map(str::trim)
+			.map(Token::Text);
 
 		(Token::Paragraph(text_split.collect()), lookahead)
 	}
