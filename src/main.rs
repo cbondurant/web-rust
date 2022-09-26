@@ -84,7 +84,7 @@ Paragraph 2",
 	}
 
 	#[test]
-	fn paragraph_continuation() {
+	fn adjacent_paragraphs_should_merge() {
 		assert_parse(
 			vec![Token::Paragraph(vec![
 				Token::Text("Paragraph"),
@@ -92,6 +92,22 @@ Paragraph 2",
 			])],
 			"Paragraph
 		Continuation",
+		)
+	}
+
+	#[test]
+	fn lines_marked_right_bracket_parse_as_blockquote() {
+		assert_parse(
+			vec![Token::Blockquote(vec![Token::Text("Quote")])],
+			"> Quote",
+		)
+	}
+
+	#[test]
+	fn adjacent_blockquotes_merge_to_one() {
+		assert_parse(
+			vec![Token::Blockquote(vec![Token::Text("Quote"), Token::Text("Quote line 2")])],
+			"> Quote\n> Quote line 2",
 		)
 	}
 }

@@ -45,6 +45,8 @@ impl<'text> MDParser<'text> {
 	}
 
 	fn consume_blockquote(&mut self) -> Token<'text> {
+
+		self.markdown = &self.markdown[1..];
 		let mut lookahead = self.markdown.len();
 
 		let mut peek_iter = self.markdown.char_indices().peekable();
@@ -59,7 +61,7 @@ impl<'text> MDParser<'text> {
 
 		let text_split = self.markdown[..lookahead]
 			.trim()
-			.split('\n')
+			.split("\n>")
 			.map(str::trim)
 			.map(Token::Text);
 
