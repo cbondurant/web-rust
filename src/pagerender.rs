@@ -22,14 +22,6 @@ impl<'a> PageRenderer<'a> {
 		}
 	}
 
-	fn render_heading(size: i8, text: &str) -> String {
-		format!("<h{size}>{text}</h{size}>")
-	}
-
-	fn render_blockquote(elements: Vec<Token>) -> String {
-		format!("")
-	}
-
 	fn generate_meta(&self) -> String {
 		// Yeah ill make this better later, I need something in place.
 		"body {
@@ -63,23 +55,31 @@ impl<'a> PageRenderer<'a> {
 		.to_string()
 	}
 
-	fn render_paragraph(&self, elements: Vec<Token>) -> String {
+	fn render_heading(size: i8, text: &str) -> String {
+		format!("<h{size}>{text}</h{size}>")
+	}
+
+	fn render_blockquote(elements: Vec<Token>) -> String {
 		let mut html = String::new();
 		html.push_str("<p>");
 		let mut current_line_length = 0;
+		html.push_str("* ");
 		for element in elements {
 			match element {
 				Token::Text(text) => {
 					for word in text.split_ascii_whitespace() {
-						if word.len() + current_line_length <= 80 {
+						if word.len() + current_line_length <= 60 {
 							if current_line_length != 0 {
 								html.push(' ');
 							}
 							html.push_str(word);
 
-							current_line_length += word.len();
+							current_line_length += word.len() + (current_line_length != 0) as usize; // Add one for the additional space.
 						} else {
-							html.push_str("<br/>");
+							for _ in 0..60 - current_line_length {
+								html.push(' ');
+							}
+							html.push_str("<br/>* ");
 							html.push_str(word);
 							current_line_length = word.len();
 						}
@@ -88,7 +88,46 @@ impl<'a> PageRenderer<'a> {
 				_ => unreachable!(),
 			}
 		}
+		for _ in 0..60 - current_line_length {
+			html.push(' ');
+		}
 		html.push_str("</p>");
+		html
+	}
+
+	fn render_paragraph(&self, elements: Vec<Token>) -> String {
+		let mut html = String::new();
+		html.push_str("<p>");
+		let mut current_line_length = 0;
+		html.push('|');
+		for element in elements {
+			match element {
+				Token::Text(text) => {
+					for word in text.split_ascii_whitespace() {
+						if word.len() + current_line_length <= 60 {
+							if current_line_length != 0 {
+								html.push(' ');
+							}
+							html.push_str(word);
+
+							current_line_length += word.len() + (current_line_length != 0) as usize; // Add one for the additional space.
+						} else {
+							for _ in 0..60 - current_line_length {
+								html.push(' ');
+							}
+							html.push_str("|<br/>|");
+							html.push_str(word);
+							current_line_length = word.len();
+						}
+					}
+				}
+				_ => unreachable!(),
+			}
+		}
+		for _ in 0..60 - current_line_length {
+			html.push(' ');
+		}
+		html.push_str("|</p>");
 		html
 	}
 
@@ -100,6 +139,13 @@ impl<'a> PageRenderer<'a> {
 		html.push_str("</style>");
 		html.push_str("</head>");
 		html.push_str("<body><pre>");
+		html.push_str(
+			"<span aria-label='conner.bond'>
+ _______  ___  ___  ___ ____  / /  ___  ___  ___/ /
+/ __/ _ \\/ _ \\/ _ \\/ -_) __/ / _ \\/ _ \\/ _ \\/ _  /
+\\__/\\___/_//_/_//_/\\__/_/ (_)_.__/\\___/_//_/\\_,_/
+</span>",
+		);
 		for token in MDParser::new(self.text) {
 			let render = match token {
 				Token::Heading(size, text) => Self::render_heading(size, text),
