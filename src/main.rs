@@ -17,7 +17,8 @@ fn main() {
 
 Wow!!!
 This is a test paragraph!
-*and* a continuation
+*and* a continuation that needs to be a lot longer to ensure the length of all of this stuff.
+we wanna make sure that our linebreaking everything works without issue.
 
 Second Paragraph",
 	);
