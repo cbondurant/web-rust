@@ -45,7 +45,6 @@ impl<'text> MDParser<'text> {
 	}
 
 	fn consume_blockquote(&mut self) -> Token<'text> {
-
 		self.markdown = &self.markdown[1..];
 		let mut lookahead = self.markdown.len();
 

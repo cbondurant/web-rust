@@ -106,7 +106,10 @@ Paragraph 2",
 	#[test]
 	fn adjacent_blockquotes_merge_to_one() {
 		assert_parse(
-			vec![Token::Blockquote(vec![Token::Text("Quote"), Token::Text("Quote line 2")])],
+			vec![Token::Blockquote(vec![
+				Token::Text("Quote"),
+				Token::Text("Quote line 2"),
+			])],
 			"> Quote\n> Quote line 2",
 		)
 	}
