@@ -83,9 +83,27 @@ impl<'text> MDParser<'text> {
 		Token::Heading(header_level as i8, head.trim())
 	}
 
+	fn try_consume_link(text: &'text str) -> Option<(Token<'text>, usize)> {
+		if let Some(close_bracket_location) = text.find(']') {
+			if let Some('(') = text[close_bracket_location + 1..].chars().next() {
+				if let Some(close_paren_location) = text[close_bracket_location + 1..].find(')') {
+					return Some((
+						Token::Link {
+							href: &text[1..close_bracket_location],
+							text: &text[close_bracket_location + 2
+								..close_bracket_location + 1 + close_paren_location],
+						},
+						close_bracket_location + close_paren_location + 2,
+					));
+				}
+			}
+		}
+		None
+	}
+
 	fn consume_paragraph(&mut self) -> Token<'text> {
 		let mut lookahead = self.markdown.len();
-
+		let mut elements = Vec::new();
 		let mut peek_iter = self.markdown.char_indices().peekable();
 		while let Some((index, c)) = peek_iter.next() {
 			if c == '\n' {
@@ -94,17 +112,34 @@ impl<'text> MDParser<'text> {
 					break;
 				}
 			}
+			if c == '[' {
+				if let Some((link, lookahead)) = Self::try_consume_link(&self.markdown[index..]) {
+					elements.extend(
+						self.markdown[..index]
+							.trim()
+							.split('\n')
+							.map(str::trim)
+							.map(Token::Text),
+					);
+					self.advance_markdown(index + lookahead);
+					peek_iter = self.markdown.char_indices().peekable();
+					println!("{:?}", link);
+					elements.push(link);
+					println!("{}", &self.markdown);
+				}
+			}
 		}
-
-		let text_split = self.markdown[..lookahead]
-			.trim()
-			.split('\n')
-			.map(str::trim)
-			.map(Token::Text);
+		elements.extend(
+			self.markdown[..lookahead]
+				.trim()
+				.split('\n')
+				.map(str::trim)
+				.map(Token::Text),
+		);
 
 		self.advance_markdown(lookahead);
 
-		Token::Paragraph(text_split.collect())
+		Token::Paragraph(elements)
 	}
 }
 

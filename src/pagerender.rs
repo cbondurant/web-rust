@@ -104,21 +104,40 @@ impl<'a> PageRenderer<'a> {
 			match element {
 				Token::Text(text) => {
 					for word in text.split_ascii_whitespace() {
-						if word.len() + current_line_length <= 60 {
-							if current_line_length != 0 {
-								html.push(' ');
-							}
+						if word.len() + current_line_length < 60 {
 							html.push_str(word);
+							html.push(' ');
 
-							current_line_length += word.len() + (current_line_length != 0) as usize; // Add one for the additional space.
+							current_line_length += word.len() + 1; // Add one for the additional space.
+						} else if word.len() + current_line_length == 60 {
+							html.push_str(word);
+							current_line_length = 60;
 						} else {
 							for _ in 0..60 - current_line_length {
 								html.push(' ');
 							}
 							html.push_str("|<br/>|");
 							html.push_str(word);
-							current_line_length = word.len();
+							html.push(' ');
+							current_line_length = word.len() + 1;
 						}
+					}
+				}
+				Token::Link { href, text } => {
+					let link = format!("<a href=\"{href}\">{text}</a>");
+					if text.len() + current_line_length < 60 {
+						html.push_str(link.as_str());
+						html.push(' ');
+					} else if text.len() + current_line_length == 60 {
+						html.push_str(link.as_str());
+					} else {
+						for _ in 0..60 - current_line_length {
+							html.push(' ');
+						}
+						html.push_str("|<br/>|");
+						html.push_str(link.as_str());
+						html.push(' ');
+						current_line_length = text.len() + 1;
 					}
 				}
 				_ => unreachable!(),
