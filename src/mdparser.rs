@@ -89,8 +89,8 @@ impl<'text> MDParser<'text> {
 				if let Some(close_paren_location) = text[close_bracket_location + 1..].find(')') {
 					return Some((
 						Token::Link {
-							href: &text[1..close_bracket_location],
-							text: &text[close_bracket_location + 2
+							text: &text[1..close_bracket_location],
+							href: &text[close_bracket_location + 2
 								..close_bracket_location + 1 + close_paren_location],
 						},
 						close_bracket_location + close_paren_location + 2,
@@ -123,9 +123,7 @@ impl<'text> MDParser<'text> {
 					);
 					self.advance_markdown(index + lookahead);
 					peek_iter = self.markdown.char_indices().peekable();
-					println!("{:?}", link);
 					elements.push(link);
-					println!("{}", &self.markdown);
 				}
 			}
 		}
