@@ -1,18 +1,14 @@
-use std::collections::HashMap;
-
 use crate::mdparser::{MDParser, Token};
+use std::cmp::Ordering;
 
 pub struct PageRenderer<'a> {
 	text: &'a str,
-	configuration: toml::Value,
+	config: toml::Value,
 }
 
 impl<'a> PageRenderer<'a> {
 	pub fn new(text: &'a str, config: toml::Value) -> Self {
-		PageRenderer {
-			text: text,
-			configuration: config,
-		}
+		PageRenderer { text, config }
 	}
 
 	fn generate_meta(&self) -> String {
@@ -53,7 +49,7 @@ impl<'a> PageRenderer<'a> {
 	}
 
 	fn render_blockquote(&self, elements: Vec<Token>) -> String {
-		let line_width = self.configuration["global"]["text_width"]
+		let line_width = self.config["global"]["text_width"]
 			.as_integer()
 			.unwrap_or(60) as usize;
 
@@ -65,20 +61,24 @@ impl<'a> PageRenderer<'a> {
 			match element {
 				Token::Text(text) => {
 					for word in text.split_ascii_whitespace() {
-						if word.len() + current_line_length <= line_width {
-							if current_line_length != 0 {
-								html.push(' ');
-							}
-							html.push_str(word);
+						match (word.len() + current_line_length).cmp(&line_width) {
+							Ordering::Less | Ordering::Equal => {
+								if current_line_length != 0 {
+									html.push(' ');
+								}
+								html.push_str(word);
 
-							current_line_length += word.len() + (current_line_length != 0) as usize; // Add one for the additional space.
-						} else {
-							for _ in 0..line_width - current_line_length {
-								html.push(' ');
+								current_line_length +=
+									word.len() + (current_line_length != 0) as usize; // Add one for the additional space.
 							}
-							html.push_str("<br/>* ");
-							html.push_str(word);
-							current_line_length = word.len();
+							Ordering::Greater => {
+								for _ in 0..line_width - current_line_length {
+									html.push(' ');
+								}
+								html.push_str("<br/>* ");
+								html.push_str(word);
+								current_line_length = word.len();
+							}
 						}
 					}
 				}
@@ -93,7 +93,7 @@ impl<'a> PageRenderer<'a> {
 	}
 
 	fn render_paragraph(&self, elements: Vec<Token>) -> String {
-		let line_width = self.configuration["global"]["text_width"]
+		let line_width = self.config["global"]["text_width"]
 			.as_integer()
 			.unwrap_or(60) as usize;
 
@@ -105,40 +105,48 @@ impl<'a> PageRenderer<'a> {
 			match element {
 				Token::Text(text) => {
 					for word in text.split_ascii_whitespace() {
-						if word.len() + current_line_length < line_width {
-							html.push_str(word);
-							html.push(' ');
-
-							current_line_length += word.len() + 1; // Add one for the additional space.
-						} else if word.len() + current_line_length == line_width {
-							html.push_str(word);
-							current_line_length = line_width;
-						} else {
-							for _ in 0..line_width - current_line_length {
+						match (word.len() + current_line_length).cmp(&line_width) {
+							Ordering::Less => {
+								html.push_str(word);
 								html.push(' ');
+
+								current_line_length += word.len() + 1; // Add one for the additional space.
 							}
-							html.push_str("|<br/>|");
-							html.push_str(word);
-							html.push(' ');
-							current_line_length = word.len() + 1;
+							Ordering::Equal => {
+								html.push_str(word);
+								current_line_length = line_width;
+							}
+							Ordering::Greater => {
+								for _ in 0..line_width - current_line_length {
+									html.push(' ');
+								}
+								html.push_str("|<br/>|");
+								html.push_str(word);
+								html.push(' ');
+								current_line_length = word.len() + 1;
+							}
 						}
 					}
 				}
 				Token::Link { href, text } => {
 					let link = format!("<a href=\"{href}\">{text}</a>");
-					if text.len() + current_line_length < line_width {
-						html.push_str(link.as_str());
-						html.push(' ');
-					} else if text.len() + current_line_length == line_width {
-						html.push_str(link.as_str());
-					} else {
-						for _ in 0..line_width - current_line_length {
+					match (text.len() + current_line_length).cmp(&line_width) {
+						Ordering::Less => {
+							html.push_str(link.as_str());
 							html.push(' ');
 						}
-						html.push_str("|<br/>|");
-						html.push_str(link.as_str());
-						html.push(' ');
-						current_line_length = text.len() + 1;
+						Ordering::Equal => {
+							html.push_str(link.as_str());
+						}
+						Ordering::Greater => {
+							for _ in 0..line_width - current_line_length {
+								html.push(' ');
+							}
+							html.push_str("|<br/>|");
+							html.push_str(link.as_str());
+							html.push(' ');
+							current_line_length = text.len() + 1;
+						}
 					}
 				}
 				_ => unreachable!(),
@@ -171,8 +179,8 @@ impl<'a> PageRenderer<'a> {
 				Token::Heading(size, text) => Self::render_heading(size, text),
 				Token::Paragraph(elements) => self.render_paragraph(elements),
 				Token::Blockquote(elements) => self.render_blockquote(elements),
-				Token::Image { src } => todo!(),
-				Token::Codeblock { lang, text } => todo!(),
+				Token::Image { src: _ } => todo!(),
+				Token::Codeblock { lang: _, text: _ } => todo!(),
 				// Should not be reachable if parsing is correct
 				_ => unreachable!("This tag should not be top level! {:?}", token),
 			};

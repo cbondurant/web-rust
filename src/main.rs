@@ -14,9 +14,8 @@ fn main() {
 	};
 
 	let mut data = String::new();
-	match config_file.read_to_string(&mut data) {
-		Err(why) => panic!("Failed to read from configuration file wust.toml: {}", why),
-		Ok(_) => (),
+	if let Err(why) = config_file.read_to_string(&mut data) {
+		panic!("Failed to read from configuration file wust.toml: {}", why)
 	}
 	let config = data.parse::<toml::Value>().unwrap();
 
