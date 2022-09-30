@@ -2,23 +2,16 @@ use std::collections::HashMap;
 
 use crate::mdparser::{MDParser, Token};
 
-enum RenderConfigItem {
-	Bool(bool),
-	Integer(i32),
-	String(String),
-}
-
 pub struct PageRenderer<'a> {
 	text: &'a str,
-	configuration: HashMap<&'a str, RenderConfigItem>,
+	configuration: toml::Value,
 }
 
 impl<'a> PageRenderer<'a> {
-	pub fn new(text: &'a str) -> Self {
-		let configuration = HashMap::from([("page_width", "80".to_string())]);
+	pub fn new(text: &'a str, config: toml::Value) -> Self {
 		PageRenderer {
 			text: text,
-			configuration: HashMap::new(),
+			configuration: config,
 		}
 	}
 
@@ -59,7 +52,11 @@ impl<'a> PageRenderer<'a> {
 		format!("<h{size}>{text}</h{size}>")
 	}
 
-	fn render_blockquote(elements: Vec<Token>) -> String {
+	fn render_blockquote(&self, elements: Vec<Token>) -> String {
+		let line_width = self.configuration["global"]["text_width"]
+			.as_integer()
+			.unwrap_or(60) as usize;
+
 		let mut html = String::new();
 		html.push_str("<p>");
 		let mut current_line_length = 0;
@@ -68,7 +65,7 @@ impl<'a> PageRenderer<'a> {
 			match element {
 				Token::Text(text) => {
 					for word in text.split_ascii_whitespace() {
-						if word.len() + current_line_length <= 60 {
+						if word.len() + current_line_length <= line_width {
 							if current_line_length != 0 {
 								html.push(' ');
 							}
@@ -76,7 +73,7 @@ impl<'a> PageRenderer<'a> {
 
 							current_line_length += word.len() + (current_line_length != 0) as usize; // Add one for the additional space.
 						} else {
-							for _ in 0..60 - current_line_length {
+							for _ in 0..line_width - current_line_length {
 								html.push(' ');
 							}
 							html.push_str("<br/>* ");
@@ -88,7 +85,7 @@ impl<'a> PageRenderer<'a> {
 				_ => unreachable!(),
 			}
 		}
-		for _ in 0..60 - current_line_length {
+		for _ in 0..line_width - current_line_length {
 			html.push(' ');
 		}
 		html.push_str("</p>");
@@ -96,6 +93,10 @@ impl<'a> PageRenderer<'a> {
 	}
 
 	fn render_paragraph(&self, elements: Vec<Token>) -> String {
+		let line_width = self.configuration["global"]["text_width"]
+			.as_integer()
+			.unwrap_or(60) as usize;
+
 		let mut html = String::new();
 		html.push_str("<p>");
 		let mut current_line_length = 0;
@@ -104,16 +105,16 @@ impl<'a> PageRenderer<'a> {
 			match element {
 				Token::Text(text) => {
 					for word in text.split_ascii_whitespace() {
-						if word.len() + current_line_length < 60 {
+						if word.len() + current_line_length < line_width {
 							html.push_str(word);
 							html.push(' ');
 
 							current_line_length += word.len() + 1; // Add one for the additional space.
-						} else if word.len() + current_line_length == 60 {
+						} else if word.len() + current_line_length == line_width {
 							html.push_str(word);
-							current_line_length = 60;
+							current_line_length = line_width;
 						} else {
-							for _ in 0..60 - current_line_length {
+							for _ in 0..line_width - current_line_length {
 								html.push(' ');
 							}
 							html.push_str("|<br/>|");
@@ -125,13 +126,13 @@ impl<'a> PageRenderer<'a> {
 				}
 				Token::Link { href, text } => {
 					let link = format!("<a href=\"{href}\">{text}</a>");
-					if text.len() + current_line_length < 60 {
+					if text.len() + current_line_length < line_width {
 						html.push_str(link.as_str());
 						html.push(' ');
-					} else if text.len() + current_line_length == 60 {
+					} else if text.len() + current_line_length == line_width {
 						html.push_str(link.as_str());
 					} else {
-						for _ in 0..60 - current_line_length {
+						for _ in 0..line_width - current_line_length {
 							html.push(' ');
 						}
 						html.push_str("|<br/>|");
@@ -143,7 +144,7 @@ impl<'a> PageRenderer<'a> {
 				_ => unreachable!(),
 			}
 		}
-		for _ in 0..60 - current_line_length {
+		for _ in 0..line_width - current_line_length {
 			html.push(' ');
 		}
 		html.push_str("|</p>");
@@ -169,7 +170,7 @@ impl<'a> PageRenderer<'a> {
 			let render = match token {
 				Token::Heading(size, text) => Self::render_heading(size, text),
 				Token::Paragraph(elements) => self.render_paragraph(elements),
-				Token::Blockquote(elements) => Self::render_blockquote(elements),
+				Token::Blockquote(elements) => self.render_blockquote(elements),
 				Token::Image { src } => todo!(),
 				Token::Codeblock { lang, text } => todo!(),
 				// Should not be reachable if parsing is correct
